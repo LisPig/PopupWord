@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@drawable/rounded_window"
+    tools:context=".MainActivity"
+    >
+
+
+    <TextView
+        android:id="@+id/wordTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="24sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/rounded_background" />
+
+    <TextView
+        android:id="@+id/commentTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+
+        android:textSize="16sp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/wordTextView"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/rounded_background" />
+
+    <EditText
+        android:id="@+id/inputEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter word"
+        android:inputType="text"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/commentTextView"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/rounded_background"
+        android:gravity="center_vertical|center_horizontal"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:clickable="true"/>
+
+    <Button
+        android:id="@+id/confirmButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Confirm"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/inputEditText"
+        android:background="@drawable/rounded_button_background"/>
+
+</RelativeLayout>
