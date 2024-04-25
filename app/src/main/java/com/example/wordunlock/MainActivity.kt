@@ -9,17 +9,21 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.wordunlock.adapters.WordListAdapter
+import com.example.wordunlock.models.WordList
 import com.example.wordunlock.ui.theme.WordUnlockTheme
+import com.example.wordunlock.util.JsonUtils
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var wordLists: MutableList<WordList>
 
     companion object {
         private const val REQUEST_CODE_OVERLAY_PERMISSION = 100
@@ -45,7 +49,13 @@ class MainActivity : ComponentActivity() {
                 .show()
         } else {
             // 辅助功能已开启，执行其他逻辑
+            setContentView(R.layout.activity_main)
 
+            recyclerView = this.findViewById(R.id.recycler_view)
+            recyclerView.layoutManager = LinearLayoutManager(this)
+
+            loadWordLists()
+            setupAdapter()
 
         }
 
@@ -83,6 +93,29 @@ class MainActivity : ComponentActivity() {
                 System.out.println("fail")
             }
         }
+    }
+
+    // 示例：从 JSON 文件加载词库数据
+    private fun loadWordLists() {
+        val resources = resources
+        val jsonFileIds = resources.getIntArray(R.array.json_file_ids)
+
+        wordLists = mutableListOf()
+        for (resourceId in jsonFileIds) {
+            val wordList = JsonUtils.loadWordListFromRawResource(this, resourceId)
+            wordList.isSelected = false
+            wordLists.add(wordList)
+        }
+    }
+
+    private fun setupAdapter() {
+        val adapter = WordListAdapter(this, wordLists) { wordList, isSelected ->
+            wordList.isSelected = isSelected
+            recyclerView.adapter?.notifyItemChanged(wordLists.indexOf(wordList))
+
+            // 如果需要持久化存储用户选择，可以在这里保存到SharedPreferences等
+        }
+        recyclerView.adapter = adapter
     }
 }
 

@@ -99,4 +99,6 @@ class WordUnlockService : AccessibilityService() {
             startService(intent)
         }
     }
+
+
 }
