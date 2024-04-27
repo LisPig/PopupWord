@@ -18,6 +18,7 @@ import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
@@ -149,6 +150,11 @@ class WordUnlockForegroundService : Service() {
                         val shake = AnimationUtils.loadAnimation(this, R.anim.shake)
                         inputEditText?.startAnimation(shake)
                     }
+                }
+
+                val closeButton: ImageView = view.findViewById(R.id.close_button)
+                closeButton.setOnClickListener{
+                    EasyFloat.dismiss("float_word_input",true)
                 }
             }) // 设置悬浮窗布局
             .setShowPattern(ShowPattern.ALL_TIME) // 设置显示模式 (例如始终显示)

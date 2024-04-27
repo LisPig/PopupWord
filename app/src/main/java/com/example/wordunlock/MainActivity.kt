@@ -15,15 +15,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.wordunlock.adapters.JsonFileListAdapter
 import com.example.wordunlock.adapters.WordListAdapter
 import com.example.wordunlock.models.WordList
 import com.example.wordunlock.ui.theme.WordUnlockTheme
-import com.example.wordunlock.util.JsonUtils
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var wordLists: MutableList<WordList>
+    private lateinit var jsonFileListAdapter: JsonFileListAdapter
 
     companion object {
         private const val REQUEST_CODE_OVERLAY_PERMISSION = 100
@@ -52,10 +53,12 @@ class MainActivity : ComponentActivity() {
             setContentView(R.layout.activity_main)
 
             recyclerView = this.findViewById(R.id.recycler_view)
-            recyclerView.layoutManager = LinearLayoutManager(this)
+            val layoutManager = LinearLayoutManager(this)
+            recyclerView.layoutManager = layoutManager
 
-            loadWordLists()
-            setupAdapter()
+            val fileNames = getRawFileNames(this)
+            jsonFileListAdapter = JsonFileListAdapter(this, fileNames)
+            recyclerView.adapter = jsonFileListAdapter
 
         }
 
@@ -96,17 +99,13 @@ class MainActivity : ComponentActivity() {
     }
 
     // 示例：从 JSON 文件加载词库数据
-    private fun loadWordLists() {
-        val resources = resources
-        val jsonFileIds = resources.getIntArray(R.array.json_file_ids)
+   // private fun getRawFileNames() {
 
-        wordLists = mutableListOf()
-        for (resourceId in jsonFileIds) {
-            val wordList = JsonUtils.loadWordListFromRawResource(this, resourceId)
-            wordList.isSelected = false
-            wordLists.add(wordList)
+        fun getRawFileNames(context: Context): List<String> {
+            val rawClass = R.raw::class.java
+            return rawClass.fields.map { it.name }
         }
-    }
+    //}
 
     private fun setupAdapter() {
         val adapter = WordListAdapter(this, wordLists) { wordList, isSelected ->
@@ -117,6 +116,39 @@ class MainActivity : ComponentActivity() {
         }
         recyclerView.adapter = adapter
     }
+
+    override fun onResume() {
+        super.onResume()
+        // 在Activity变为可见时检查辅助功能状态
+        if (!isAccessibilityServiceEnabled()) {
+            // 如果辅助功能未开启，在这里处理逻辑，比如弹窗提示或直接finish()
+            // 注意：此处处理逻辑需谨慎，避免无限循环或用户体验不佳的情况
+            // 示例代码可能需要根据实际情况调整
+            AlertDialog.Builder(this)
+                .setTitle("辅助功能未开启")
+                .setMessage("请确保辅助功能已开启以正常使用应用。")
+                .setPositiveButton("确定"){ _, _ ->
+                    // 这里可以考虑直接finish()或者引导用户去设置，但需避免重复弹窗
+                }
+                .setCancelable(false) // 避免用户点击外部关闭而不做处理
+                .show()
+        } else {
+            // 辅助功能已开启，执行其他逻辑
+            setContentView(R.layout.activity_main)
+            // val fileList = assets.list("raw")
+            /*val raw_read_string = applicationContext.resources.openRawResource(R.raw.sixlevel).bufferedReader().use{
+                it.readText()
+            }*/
+            recyclerView = this.findViewById(R.id.recycler_view)
+            val layoutManager = LinearLayoutManager(this)
+            recyclerView.layoutManager = layoutManager
+
+            val fileNames = getRawFileNames(this)
+            jsonFileListAdapter = JsonFileListAdapter(this, fileNames)
+            recyclerView.adapter = jsonFileListAdapter
+        }
+    }
+
 }
 
 @Composable

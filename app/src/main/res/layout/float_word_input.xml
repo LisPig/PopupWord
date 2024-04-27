@@ -3,10 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:padding="16dp"
     android:background="@drawable/rounded_window"
-    tools:context=".MainActivity"
-    >
+    tools:context=".MainActivity">
 
 
     <TextView
@@ -53,4 +53,13 @@
         android:layout_below="@id/inputEditText"
         android:background="@drawable/rounded_button_background"/>
 
+    <ImageView
+        android:id="@+id/close_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onCloseButtonClicked"
+        android:padding="8dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/baseline_highlight_off_24" />
 </RelativeLayout>

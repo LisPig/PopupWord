@@ -4,12 +4,19 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import com.example.wordunlock.models.WordDefinition
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import kotlin.random.Random
 
 class WordUnlockService : AccessibilityService() {
 
@@ -61,13 +68,10 @@ class WordUnlockService : AccessibilityService() {
 
     private fun isLauncherPackage(packageName: String): Boolean {
         // 获取设备的 Launcher 应用的包名
-        val intent = Intent(Intent.ACTION_MAIN)
-        intent.addCategory(Intent.CATEGORY_HOME)
-        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
         val launcherPackageName = resolveInfo?.activityInfo?.packageName
-
-        // 检查当前应用的包名是否是 Launcher 应用的包名
-        return packageName == launcherPackageName
+        return launcherPackageName != null && packageName == launcherPackageName
     }
 
     private fun isLockScreen(node: AccessibilityNodeInfo?): Boolean {
@@ -93,12 +97,40 @@ class WordUnlockService : AccessibilityService() {
     private fun showWordInputActivity() {
         if (currentActivity == null) {
             val intent = Intent(this, WordUnlockForegroundService::class.java)
-            intent.putExtra("word", "apple") // 传递单词数据
-            intent.putExtra("definition", "苹果") // 传递单词定义
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            startService(intent)
+            val randomWordDefinition = getRandomWordDefinitionFromJson(this)
+            randomWordDefinition?.let {
+                val word = it.word
+                var definition = it.definition
+
+                intent.putExtra("word", word) // 传递单词数据
+                intent.putExtra("definition", definition) // 传递单词定义
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                startService(intent)
+            }
         }
     }
 
 
+    fun getRandomWordDefinitionFromJson(context: Context): WordDefinition? {
+        val resourceId = context.resources.getIdentifier("sixlevel", "raw", context.packageName)
+        if (resourceId == 0) {
+            // 文件不存在或命名错误
+            return null
+        }
+
+        val inputStream = context.resources.openRawResource(resourceId)
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        val sb = StringBuilder()
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+            sb.append(line)
+        }
+
+        val gson = Gson()
+        val type = object : TypeToken<List<WordDefinition>>() {}.type
+        val wordDefinitions: List<WordDefinition> = gson.fromJson(sb.toString(), type)
+
+        val random = java.util.Random()
+        return wordDefinitions.randomOrNull() ?: return null
+    }
 }
