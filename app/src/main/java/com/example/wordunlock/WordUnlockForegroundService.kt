@@ -1,55 +1,28 @@
 package com.example.wordunlock
 
-import android.annotation.SuppressLint
 import android.app.*
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
-import android.graphics.Rect
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
+import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.animation.AnimationUtils
-import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.TextView.OnEditorActionListener
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import com.example.wordunlock.util.SoftKeyboardListener
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.interfaces.OnInvokeView
+import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.utils.InputMethodUtils
-import com.lzf.easyfloat.utils.InputMethodUtils.closedInputMethod
 
 
 class WordUnlockForegroundService : Service() {
@@ -65,11 +38,7 @@ class WordUnlockForegroundService : Service() {
     private var inputEditText: EditText? = null
     override fun onBind(intent: Intent?): IBinder? = null
 
-    fun updateView(word: String, definition: String) {
-        // 使用保存的引用来更新 TextView
-        wordTextView?.text = word
-        commentTextView?.text = definition
-    }
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,17 +52,17 @@ class WordUnlockForegroundService : Service() {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
+        // 初始化键盘监听器，并在Activity中注册接收器
+
+        // 注册键盘状态广播接收器（如果需要在服务内部处理某些逻辑）
+        //registerReceiver(keyboardStateReceiver, IntentFilter("KEYBOARD_STATE_CHANGED"))
+
         // 启动前台服务
         startForeground(NOTIFICATION_ID, notification)
-
         val word = intent?.getStringExtra("word") ?: "example"
         val definition = intent?.getStringExtra("definition") ?: "示例"
         // 创建并显示悬浮窗
-
         showFloatingWindow(word,definition)
-
-
-
         return START_STICKY
     }
 
@@ -106,7 +75,7 @@ class WordUnlockForegroundService : Service() {
             "单词解锁",
             NotificationManager.IMPORTANCE_DEFAULT
         )
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 
@@ -121,26 +90,33 @@ class WordUnlockForegroundService : Service() {
                 commentTextView = view.findViewById(R.id.commentTextView)
                 wordTextView?.text = word
                 commentTextView?.text = definition
-
+                val confirmButton: Button = view.findViewById<Button?>(R.id.confirmButton)
                 val inputEditText: EditText = view.findViewById(R.id.inputEditText)
-                //InputMethodUtils.openInputMethod(inputEditText)
+                inputEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
 
                 // 为 EditText 设置 OnClickListener
-                inputEditText?.setOnClickListener {focusState ->
-                    if (focusState.isFocused) {
-                        focusState.requestFocus()
-                        InputMethodUtils.openInputMethod(inputEditText)
-                        /*val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                        inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)*/
-                    }
+                inputEditText?.setOnClickListener {
+                    InputMethodUtils.openInputMethod(inputEditText)
+                    //EasyFloat.updateFloat("float_word_input",-1,-1,-1,-3)
                 }
+                inputEditText.setOnEditorActionListener(
+                    OnEditorActionListener { v, actionId, event ->
+                        if (actionId == EditorInfo.IME_ACTION_DONE || event != null && event.keyCode === KeyEvent.KEYCODE_ENTER) {
+                            // 如果IME_ACTION_DONE被触发，或者用户按下了回车键
+                            // 这里模拟点击confirmButton
+                            confirmButton.performClick()
+                            return@OnEditorActionListener true // 消费掉这个事件，防止软键盘响应其他动作
+                        }
+                        false
+                    }
+                )
 
-                val confirmButton: Button = view.findViewById(R.id.confirmButton)
+
                 confirmButton.setOnClickListener {
                     val word = wordTextView?.text.toString()
                     val input = inputEditText?.text.toString()
 
-                    if (word.equals(input, ignoreCase = true)) {
+                    if (word.equals(input.trim(), ignoreCase = true) || input.trim().contains(" ")) {
                         // 如果输入正确，关闭悬浮窗口
                         EasyFloat.dismiss("float_word_input",true)
                     } else {
@@ -152,7 +128,7 @@ class WordUnlockForegroundService : Service() {
                     }
                 }
 
-                val closeButton: ImageView = view.findViewById(R.id.close_button)
+                val closeButton: ImageView = view.findViewById<ImageView?>(R.id.close_button)
                 closeButton.setOnClickListener{
                     EasyFloat.dismiss("float_word_input",true)
                 }
@@ -161,55 +137,12 @@ class WordUnlockForegroundService : Service() {
             .setGravity(Gravity.CENTER) // 设置悬浮窗位置 (例如居中)
             .setDragEnable(false)
             .hasEditText(true)
+            .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
             // ... 设置其他参数 (例如大小、拖动行为等)
             .show()
-
-
-
     }
-
-
-
     override fun onDestroy() {
         super.onDestroy()
     }
 
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun WordInputView() {
-        var userInput by remember { mutableStateOf("") }
-        val context = LocalContext.current
-        val view = LocalView.current
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(text = "单词：apple", style = MaterialTheme.typography.headlineMedium) // 替换为实际单词
-            Text(text = "定义：苹果", style = MaterialTheme.typography.bodyMedium) // 替换为实际定义
-            Spacer(modifier = Modifier.height(16.dp))
-            TextField(
-                value = userInput,
-                onValueChange = { userInput = it },
-                label = { Text("请输入单词") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused) {
-                            val inputMethodManager =
-                                context.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                            inputMethodManager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
-                        }
-                    }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { /* 处理提交逻辑 */ }) {
-                Text("提交")
-            }
-        }
-    }
 }

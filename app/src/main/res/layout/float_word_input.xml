@@ -3,30 +3,71 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="16dp"
+    android:padding="0dp"
     android:background="@drawable/rounded_window"
-    tools:context=".MainActivity">
+    >
 
 
-    <TextView
-        android:id="@+id/wordTextView"
+    <ImageView
+        android:id="@+id/close_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="24sp"
+        android:onClick="onCloseButtonClicked"
+        android:src="@drawable/baseline_highlight_off_24"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true" />
+
+
+    <LinearLayout
+        android:id="@+id/linear_layout_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@id/close_button"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="24dp"
-        android:background="@drawable/rounded_background" />
+        android:layout_marginTop="1dp"
+        android:gravity="center"
+        android:weightSum="3">
+
+        <ImageView
+            android:id="@+id/play_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onPlayButtonClicked"
+            android:src="@drawable/baseline_volume_up_24"
+            android:layout_weight="1"
+            android:layout_marginEnd="10dp"/>
+
+        <TextView
+            android:id="@+id/wordTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="24sp"
+            android:background="@drawable/rounded_background"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_marginEnd="10dp"/>
+
+        <ImageView
+            android:id="@+id/star_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onStarButtonClicked"
+            android:src="@drawable/baseline_star_24"
+            android:layout_weight="1"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/commentTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-
+        android:layout_below="@+id/linear_layout_container"
         android:textSize="16sp"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/wordTextView"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="20dp"
+        android:padding="0dp"
+        android:gravity="center"
         android:background="@drawable/rounded_background" />
 
     <EditText
@@ -34,32 +75,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Enter word"
-        android:inputType="text"
+        android:inputType="textNoSuggestions"
         android:layout_centerHorizontal="true"
         android:layout_below="@id/commentTextView"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="20dp"
         android:background="@drawable/rounded_background"
         android:gravity="center_vertical|center_horizontal"
         android:focusable="true"
         android:focusableInTouchMode="true"
+        android:imeOptions="actionDone"
         android:clickable="true"/>
 
-    <Button
+    <android.widget.Button
         android:id="@+id/confirmButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Confirm"
+        android:layout_marginBottom="20dp"
         android:layout_centerHorizontal="true"
         android:layout_below="@id/inputEditText"
         android:background="@drawable/rounded_button_background"/>
 
-    <ImageView
-        android:id="@+id/close_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="onCloseButtonClicked"
-        android:padding="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/baseline_highlight_off_24" />
 </RelativeLayout>

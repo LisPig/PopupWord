@@ -3,6 +3,7 @@ package com.example.wordunlock
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Activity
+import android.app.KeyguardManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -27,7 +28,15 @@ class WordUnlockService : AccessibilityService() {
     private var isLockScreenShown = false
     private var currentActivity: Activity? = null
     private var isOpenActivity = false
-
+    private var isUnlockTriggered = false // 新增变量追踪屏幕解锁后是否已触发
+    private var wasScreenUnlocked = false // 上次事件时屏幕是否解锁
+    private var wasOnDesktop = false // 追踪是否之前处于桌面
+    private var unlockToDesktopTriggered = false // 解锁后到桌面的逻辑是否已触发
+    private var lastUnlockTime: Long = 0 // 上次解锁时间
+    private var lastNonDesktopPackageName: String? = null // 上次非桌面应用的包名
+    private var firstInstallTriggered = false // 首次安装后回到桌面的逻辑是否已触发
+    private var firstDesktopReturnHandled = false // 首次从非桌面应用返回桌面的逻辑是否已处理
+    private var firstDesktopInteractionHandled = false // 首次从非桌面应用返回桌面的逻辑是否已处理
     // 在 WordUnlockService 中注册事件类型
     override fun onServiceConnected() {
         val info = AccessibilityServiceInfo()
@@ -35,37 +44,55 @@ class WordUnlockService : AccessibilityService() {
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-        //info.packageNames = arrayOf(packageName)
-       // info.canRetrieveWindowContent = true
         serviceInfo = info
     }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        /*val rootNode = rootInActiveWindow // 获取当前窗口的根节点
+        event ?: return
+        val eventType = event.eventType
+        val packageName = event.packageName.toString()
+        val currentTime = System.currentTimeMillis()
 
-        if (event != null) {
-            if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                isLockScreenShown = isLockScreen(rootNode)
-            } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-                // 检查当前应用是否是桌面
-                if (isHomeScreen(rootNode)) {
-                    // 添加延迟或标志，避免重复触发
-                    // ...
+
+        // 检查是否解锁
+        val isUnlockEvent = eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && isUnlockEvent(event)
+
+        // 检查是否切换到桌面
+        val isSwitchToDesktop = isLauncherPackage(packageName)
+        when {
+             isUnlockEvent  && isSwitchToDesktop -> {
+                lastUnlockTime = currentTime // 记录解锁时间
+                if (!firstDesktopReturnHandled && isSwitchToDesktop) {
+                    // 如果是首次安装后首次解锁切回桌面，触发弹窗
                     showWordInputActivity()
+                    firstDesktopReturnHandled = true
+                }
+
+            }
+            isSwitchToDesktop && lastUnlockTime > 0 && currentTime - lastUnlockTime < 500 -> {
+                // 从非桌面应用切回桌面，并且在解锁后的短时间内
+                if (!firstDesktopReturnHandled || lastNonDesktopPackageName != null) {
+                    // 首次或非首次（但符合解锁后短时间内）从非桌面应用返回桌面，触发弹窗
+                    showWordInputActivity()
+                    if (!firstDesktopReturnHandled) {
+                        firstDesktopReturnHandled = true
+                    }
                 }
             }
-        }*/
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName.toString()
-            if (isLauncherPackage(packageName) && !isOpenActivity) {
-                showWordInputActivity()
-                isOpenActivity = true
-            }else{
-                currentActivity?.finish()
-                currentActivity = null
+
+            eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !isLauncherPackage(packageName) -> {
+                // 记录离开桌面时的包名，用于后续判断是否是从非桌面应用返回桌面
+                lastNonDesktopPackageName = packageName
             }
         }
+        // 更新屏幕解锁状态
+        wasScreenUnlocked = isSwitchToDesktop
     }
 
+    private fun isUnlockEvent(event: AccessibilityEvent): Boolean {
+        // 实现检查是否解锁的逻辑，例如通过KeyguardManager或检查特定事件属性
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        return !keyguardManager.isKeyguardLocked
+    }
     private fun isLauncherPackage(packageName: String): Boolean {
         // 获取设备的 Launcher 应用的包名
         val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -74,20 +101,15 @@ class WordUnlockService : AccessibilityService() {
         return launcherPackageName != null && packageName == launcherPackageName
     }
 
-    private fun isLockScreen(node: AccessibilityNodeInfo?): Boolean {
-        if (node == null) return false
-        // 使用更通用的方法判断锁屏界面
-        // 例如，检查窗口标题、特定视图是否存在等
-        // ... 添加您的判断逻辑
-        return false // 替换为您的判断结果
+    private fun isScreenUnlocked(): Boolean {
+        // 实现检查屏幕是否解锁的逻辑
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        return !keyguardManager.isKeyguardLocked
     }
 
-    private fun isHomeScreen(node: AccessibilityNodeInfo?): Boolean {
-        if (node == null) return false
-        // 判断当前界面是否是桌面
-        // 例如，检查 launcher 应用的包名或特定视图是否存在
-        // ... 添加您的判断逻辑
-        return false // 替换为您的判断结果
+    private fun isKeyguardLocked(): Boolean {
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        return keyguardManager.isKeyguardLocked
     }
 
     override fun onInterrupt() {
@@ -95,7 +117,7 @@ class WordUnlockService : AccessibilityService() {
     }
 
     private fun showWordInputActivity() {
-        if (currentActivity == null) {
+       // if (currentActivity == null) {
             val intent = Intent(this, WordUnlockForegroundService::class.java)
             val randomWordDefinition = getRandomWordDefinitionFromJson(this)
             randomWordDefinition?.let {
@@ -107,7 +129,7 @@ class WordUnlockService : AccessibilityService() {
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 startService(intent)
             }
-        }
+       // }
     }
 
 

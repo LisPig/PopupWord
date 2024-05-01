@@ -2,6 +2,7 @@ package com.example.wordunlock
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlertDialog
+import android.app.Fragment
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -13,14 +14,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.Navigation.findNavController
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.wordunlock.Fragment.HomeFragment
 import com.example.wordunlock.adapters.JsonFileListAdapter
 import com.example.wordunlock.adapters.WordListAdapter
 import com.example.wordunlock.models.WordList
 import com.example.wordunlock.ui.theme.WordUnlockTheme
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
-class MainActivity : ComponentActivity() {
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var wordLists: MutableList<WordList>
@@ -31,26 +40,17 @@ class MainActivity : ComponentActivity() {
     }
 
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 检查辅助功能是否开启
-        if (!isAccessibilityServiceEnabled()) {
-            // 弹出对话框提示用户开启辅助功能
-            AlertDialog.Builder(this)
-                .setTitle("开启辅助功能")
-                .setMessage("请开启辅助功能以使用此应用")
-                .setPositiveButton("前往设置") { dialog, _ ->
-                    dialog.dismiss()
-                    openAccessibilitySettings()
-                }
-                .setNegativeButton("取消") { dialog, _ ->
-                    dialog.dismiss()
-                    finish() // 关闭应用
-                }
-                .show()
-        } else {
+        setContentView(R.layout.activity_main)
+
+        //val navHostFragment = fragmentManager.findFragmentById(R.id.frame_layout_container) as NavHostFragment
+        val navController = findNavController(R.id.frame_layout_container)
+        val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
+        bottomNavView.setupWithNavController(navController)
             // 辅助功能已开启，执行其他逻辑
-            setContentView(R.layout.activity_main)
+
 
             recyclerView = this.findViewById(R.id.recycler_view)
             val layoutManager = LinearLayoutManager(this)
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
             jsonFileListAdapter = JsonFileListAdapter(this, fileNames)
             recyclerView.adapter = jsonFileListAdapter
 
-        }
+        //}
 
         // 检查并请求 SYSTEM_ALERT_WINDOW 权限
         if (!Settings.canDrawOverlays(this)) {
@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
             startActivityForResult(intent, REQUEST_CODE_OVERLAY_PERMISSION)
         }
     }
+
 
     // 检查辅助功能是否开启
     private fun Context.isAccessibilityServiceEnabled(): Boolean {
@@ -127,29 +128,34 @@ class MainActivity : ComponentActivity() {
             AlertDialog.Builder(this)
                 .setTitle("辅助功能未开启")
                 .setMessage("请确保辅助功能已开启以正常使用应用。")
-                .setPositiveButton("确定"){ _, _ ->
-                    // 这里可以考虑直接finish()或者引导用户去设置，但需避免重复弹窗
+                .setPositiveButton("前往设置") { dialog, _ ->
+                    dialog.dismiss()
+                    openAccessibilitySettings()
                 }
                 .setCancelable(false) // 避免用户点击外部关闭而不做处理
                 .show()
         } else {
             // 辅助功能已开启，执行其他逻辑
-            setContentView(R.layout.activity_main)
+            //setContentView(R.layout.activity_main)
+            val navController = findNavController(R.id.frame_layout_container)
+            val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
+            bottomNavView.setupWithNavController(navController)
             // val fileList = assets.list("raw")
             /*val raw_read_string = applicationContext.resources.openRawResource(R.raw.sixlevel).bufferedReader().use{
                 it.readText()
             }*/
-            recyclerView = this.findViewById(R.id.recycler_view)
+            /*recyclerView = this.findViewById(R.id.recycler_view)
             val layoutManager = LinearLayoutManager(this)
             recyclerView.layoutManager = layoutManager
 
             val fileNames = getRawFileNames(this)
             jsonFileListAdapter = JsonFileListAdapter(this, fileNames)
-            recyclerView.adapter = jsonFileListAdapter
+            recyclerView.adapter = jsonFileListAdapter*/
         }
     }
 
 }
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
