@@ -25,7 +25,7 @@
             android:name=".FloatingWordInputService"
             android:enabled="true"
             android:exported="true"
-            android:theme="@style/Theme.Transparent"></service>
+            android:theme="@style/Theme.Transparent" />
         <service
             android:name=".WordUnlockForegroundService"
             android:enabled="true"
@@ -44,10 +44,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".WordInputActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Transparent" />
 
         <service
             android:name=".WordUnlockService"

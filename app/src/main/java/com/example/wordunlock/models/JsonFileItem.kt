@@ -1,6 +1,6 @@
 package com.example.wordunlock.models
 
 data class JsonFileItem(
-    val resourceId: Int,
-    val fileName: String
+    val fileName: String,
+    var isChecked: Boolean
 )

@@ -9,7 +9,7 @@
         <item name="android:backgroundDimEnabled">false</item>
     </style>
 
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light">
 <!--        <item name="colorPrimary">@color/custom_primary_color</item>-->
     </style>
 </resources>

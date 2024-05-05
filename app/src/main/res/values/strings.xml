@@ -3,4 +3,7 @@
     <string name="accessibility_service_description">辅助功能服务，用于解锁后学习单词</string>
     <string name="dictionary">dictionary</string>
     <string name="setting">setting</string>
+    <string name="level6vocabulary">六级词汇</string>
+    <string name="action_select">checkAll</string>
+
 </resources>
