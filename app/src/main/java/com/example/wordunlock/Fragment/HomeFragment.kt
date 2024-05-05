@@ -14,15 +14,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.wordunlock.R
 import com.example.wordunlock.adapters.HomeAdapter
 import com.example.wordunlock.adapters.JsonFileListAdapter
+import com.example.wordunlock.interfaces.SelectedPositionsProvider
+import com.example.wordunlock.models.JsonFileItem
 import com.google.gson.Gson
 import android.view.MenuInflater as MenuInflater1
 
 
-class HomeFragment : Fragment() {
+class HomeFragment : Fragment(), SelectedPositionsProvider{
     private lateinit var recyclerView: RecyclerView
     private lateinit var homeAdapter: HomeAdapter
-    //private lateinit var jsonFileListAdapter: JsonFileListAdapter
     private var selectedPositions = mutableSetOf<Int>()
+    private var selectedPositionsProvider: SelectedPositionsProvider? = null
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.home_fragment, container, false)
     }
@@ -34,27 +36,13 @@ class HomeFragment : Fragment() {
 
         val assetManager = requireContext().assets
         val files = assetManager.list("json") ?: emptyArray()
-        val adapter = HomeAdapter( files)
-        recyclerView.adapter = adapter
+        homeAdapter = HomeAdapter( files)
+        recyclerView.adapter = homeAdapter
         // 当数据加载完成或更新时调用
-        adapter.notifyDataSetChanged()
-        /*homeAdapter = HomeAdapter(
-            object : (Int, Boolean?) -> Unit {
-                override fun invoke(position: Int, isChecked: Boolean?) {
-                    if (isChecked == true) {
-                        selectedPositions.add(position)
-                    } else {
-                        selectedPositions.remove(position)
-                    }
-                    recyclerView.adapter?.notifyItemChanged(position)
-                }
-            },
-            selectedPositions,
-            files
-        )
-        recyclerView.adapter = homeAdapter*/
+        homeAdapter.notifyDataSetChanged()
 
         restoreSelectedPositions()
+        selectedPositionsProvider = this
     }
 
     override fun onPause() {
@@ -69,9 +57,12 @@ class HomeFragment : Fragment() {
         if (positionsJson != null) {
             if (positionsJson.isNotBlank()) {
                 val restoredPositions = Gson().fromJson(positionsJson, Array<Int>::class.java).toMutableSet()
-                selectedPositions.clear()
-                selectedPositions.addAll(restoredPositions)
-                selectedPositions.forEach { recyclerView.adapter?.notifyItemChanged(it) }
+                restoredPositions.forEach { position ->
+                    if (position in homeAdapter.dataList.indices) {
+                        homeAdapter.dataList[position].isChecked = true
+                        homeAdapter.notifyItemChanged(position)
+                    }
+                }
             }
         }
     }
@@ -82,10 +73,9 @@ class HomeFragment : Fragment() {
 
     private fun saveSelectedPositions() {
         val preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
-        val editor = preferences.edit()
-        val positionsJson = Gson().toJson(selectedPositions.toTypedArray())
-        editor.putString("selected_positions", positionsJson)
-        editor.apply()
+        val selectedPositions = homeAdapter.dataList.mapIndexed { index, item -> if (item.isChecked) index else -1 }.filter { it >= 0 }
+        val positionsJson = Gson().toJson(selectedPositions.toIntArray())
+        preferences.edit().putString("selected_positions", positionsJson).apply()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -105,27 +95,38 @@ class HomeFragment : Fragment() {
     }
 
     private fun selectAllItems() {
-        val itemCount = recyclerView.adapter?.itemCount ?: return
-        for (i in 0 until itemCount) {
-            selectedPositions.add(i)
+        val allItemsShouldBeChecked = !homeAdapter.dataList.any { it.isChecked }
+        homeAdapter.dataList.forEachIndexed { index, item ->
+            item.isChecked = allItemsShouldBeChecked
+            selectedPositions = if (allItemsShouldBeChecked) homeAdapter.dataList.indices.toMutableSet() else mutableSetOf()
+            homeAdapter.updateItemCheckedStatus(index, item.isChecked)
         }
-        recyclerView.adapter?.notifyDataSetChanged()
     }
 
     private fun deselectAllItems() {
-        selectedPositions.clear()
-        recyclerView.adapter?.notifyDataSetChanged()
+        homeAdapter.dataList.forEachIndexed { index, item ->
+            item.isChecked = false
+            selectedPositions.clear()
+            homeAdapter.updateItemCheckedStatus(index, item.isChecked)
+        }
+    }
+    override fun getSelectedPositions(): Set<Int> {
+        return selectedPositions.toSet()
+    }
+
+    override fun setSelectedPositions(positions: Set<Int>) {
+        this.selectedPositions = positions.toMutableSet()
     }
 
 
-
-    companion object {
+        companion object {
         @JvmStatic
         fun newInstance(): Fragment? {
             return HomeFragment()
         }
     }
 }
+
 
 
 

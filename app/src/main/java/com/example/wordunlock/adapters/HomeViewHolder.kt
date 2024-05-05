@@ -21,26 +21,18 @@ class HomeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         // 无需设置选中状态或监听器，因为JSON项可能不需要选中功能
     }
 
-    // 这里需要一个方法来绑定数据和选中状态
-    /*fun bind(item: Any, isSelected: Boolean, onItemSelected: (Int, Boolean) -> Unit) {
-        // 绑定数据到其他视图...（如果有的话）
-        val fileName = item as String
-        fileNameTextView.text = fileName.toString().substringBeforeLast(".")
-        // 设置选中状态
-        checkBox.isChecked = isSelected
-        checkBox.setOnCheckedChangeListener { _, isChecked ->
-            onItemSelected(adapterPosition, isChecked)
-        }
-    }*/
 
-    fun bind(dataObject: JsonFileItem) {
+    fun bind(dataObject: JsonFileItem,onItemSelected: ((Int, Boolean) -> Unit)?) {
         fileNameTextView.text = dataObject.fileName.toString().substringBeforeLast(".")
         checkBox.isChecked = dataObject.isChecked
-        checkBox.setOnCheckedChangeListener { _, isChecked ->
-            // 更新数据模型中的选中状态
-            dataObject.isChecked = isChecked
-
-            // 可能需要在此处执行其他操作，比如保存用户的选择
+        itemView.findViewById<CheckBox>(R.id.checkBox).apply {
+            isChecked = dataObject.isChecked
+            setOnCheckedChangeListener { _, isChecked ->
+                dataObject.isChecked = isChecked
+                // 通知适配器数据已更改
+                onItemSelected?.invoke(adapterPosition, isChecked) // 通知Adapter选中状态改变
+            }
         }
     }
+
 }

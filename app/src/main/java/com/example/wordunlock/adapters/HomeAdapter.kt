@@ -6,13 +6,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.wordunlock.R
 import com.example.wordunlock.models.JsonFileItem
 
-class HomeAdapter(/*private val onItemSelected: (Int, Boolean?) -> Unit,
-                  private val selectedPositions: MutableSet<Int>,*/
-                  private val fileNames: Array<String>? = null
+class HomeAdapter(
+                  private val fileNames: Array<String>? = null,
+                  private val onItemCheckedChangeListener: ((Int, Boolean) -> Unit)? = null
 ) : RecyclerView.Adapter<HomeViewHolder>() {
 
     // 假设您有一个数据列表
-    private var dataList: List<JsonFileItem> = emptyList()
+    var dataList: List<JsonFileItem> = emptyList()
     init {
         dataList = fileNames?.map { fileName ->
             // 创建一个数据对象，包含文件名和初始的选中状态
@@ -28,9 +28,18 @@ class HomeAdapter(/*private val onItemSelected: (Int, Boolean?) -> Unit,
 
     override fun onBindViewHolder(holder: HomeViewHolder, position: Int) {
         val item = dataList[position]
-        holder.bind(item)
+        holder.bind(item,onItemCheckedChangeListener)
     }
 
     override fun getItemCount(): Int = dataList.size
 
+    internal fun updateItemCheckedStatus(position: Int, isChecked: Boolean) {
+        dataList[position].isChecked = isChecked
+        notifyItemChanged(position) // 仅更新受影响的项
+    }
+
+    fun toggleAllCheckboxes(isChecked: Boolean) {
+        dataList.forEach { it.isChecked = isChecked }
+        notifyDataSetChanged()
+    }
 }
