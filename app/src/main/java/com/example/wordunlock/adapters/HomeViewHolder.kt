@@ -13,6 +13,7 @@ class HomeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     private val checkBox: CheckBox = itemView.findViewById(R.id.checkBox)
     private val fileNameTextView: TextView = itemView.findViewById(R.id.file_name_text_view)
 
+
     // 新增方法用于绑定JSON文件名
     fun bindJsonFileName(fileNames: Array<String>?, isSelected: Boolean, onItemSelected: (Int, Boolean) -> Unit) {
         val fileName = fileNames?.get(position)

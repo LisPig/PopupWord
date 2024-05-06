@@ -29,8 +29,9 @@ import com.example.wordunlock.adapters.JsonFileListAdapter
 import com.example.wordunlock.models.WordList
 import com.example.wordunlock.ui.theme.WordUnlockTheme
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView

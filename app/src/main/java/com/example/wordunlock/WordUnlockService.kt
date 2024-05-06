@@ -2,41 +2,29 @@ package com.example.wordunlock
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.Activity
 import android.app.KeyguardManager
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.IBinder
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
-import android.view.accessibility.AccessibilityWindowInfo
+import com.example.wordunlock.adapters.JsonFileListAdapter
 import com.example.wordunlock.models.WordDefinition
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStream
 import java.io.InputStreamReader
 import kotlin.random.Random
 
+
 class WordUnlockService : AccessibilityService() {
 
-    /*override fun onBind(intent: Intent): IBinder {
-        TODO("Return the communication channel to the service.")
-    }*/
-
-    private var isLockScreenShown = false
-    private var currentActivity: Activity? = null
-    private var isOpenActivity = false
-    private var isUnlockTriggered = false // 新增变量追踪屏幕解锁后是否已触发
     private var wasScreenUnlocked = false // 上次事件时屏幕是否解锁
-    private var wasOnDesktop = false // 追踪是否之前处于桌面
-    private var unlockToDesktopTriggered = false // 解锁后到桌面的逻辑是否已触发
     private var lastUnlockTime: Long = 0 // 上次解锁时间
     private var lastNonDesktopPackageName: String? = null // 上次非桌面应用的包名
-    private var firstInstallTriggered = false // 首次安装后回到桌面的逻辑是否已触发
     private var firstDesktopReturnHandled = false // 首次从非桌面应用返回桌面的逻辑是否已处理
-    private var firstDesktopInteractionHandled = false // 首次从非桌面应用返回桌面的逻辑是否已处理
     // 在 WordUnlockService 中注册事件类型
     override fun onServiceConnected() {
         val info = AccessibilityServiceInfo()
@@ -45,6 +33,8 @@ class WordUnlockService : AccessibilityService() {
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
         serviceInfo = info
+
+
     }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
@@ -134,13 +124,29 @@ class WordUnlockService : AccessibilityService() {
 
 
     fun getRandomWordDefinitionFromJson(context: Context): WordDefinition? {
-        val resourceId = context.resources.getIdentifier("sixlevel", "raw", context.packageName)
-        if (resourceId == 0) {
-            // 文件不存在或命名错误
+        val myApplication = applicationContext as WordUnlockApplication
+        // 获取带有文件名的列表
+        val dataList = myApplication.dataList
+        val selectedFiles = dataList.filter { it.isChecked }.map { it.fileName }
+
+        // 如果没有选择的文件，返回null
+        if (selectedFiles.isEmpty()) {
             return null
         }
 
-        val inputStream = context.resources.openRawResource(resourceId)
+        // 从assets/json目录中随机选择一个文件
+        val randomIndex = Random.nextInt(selectedFiles.size)
+        val selectedFileName = selectedFiles[randomIndex]
+
+        // 打开并读取选中的JSON文件
+        val assetManager = assets
+        val inputStream: InputStream
+        try {
+            inputStream = assetManager.open("json/$selectedFileName")
+        } catch (e: IOException) {
+            e.printStackTrace()
+            return null
+        }
         val reader = BufferedReader(InputStreamReader(inputStream))
         val sb = StringBuilder()
         var line: String?
@@ -151,8 +157,8 @@ class WordUnlockService : AccessibilityService() {
         val gson = Gson()
         val type = object : TypeToken<List<WordDefinition>>() {}.type
         val wordDefinitions: List<WordDefinition> = gson.fromJson(sb.toString(), type)
-
-        val random = java.util.Random()
+        inputStream.close()
         return wordDefinitions.randomOrNull() ?: return null
     }
+
 }

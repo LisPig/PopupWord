@@ -3,28 +3,23 @@ package com.example.wordunlock.Fragment
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.LayoutInflater
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wordunlock.R
+import com.example.wordunlock.WordUnlockApplication
 import com.example.wordunlock.adapters.HomeAdapter
-import com.example.wordunlock.adapters.JsonFileListAdapter
-import com.example.wordunlock.interfaces.SelectedPositionsProvider
-import com.example.wordunlock.models.JsonFileItem
 import com.google.gson.Gson
-import android.view.MenuInflater as MenuInflater1
 
 
-class HomeFragment : Fragment(), SelectedPositionsProvider{
+class HomeFragment : Fragment(){
     private lateinit var recyclerView: RecyclerView
     private lateinit var homeAdapter: HomeAdapter
     private var selectedPositions = mutableSetOf<Int>()
-    private var selectedPositionsProvider: SelectedPositionsProvider? = null
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.home_fragment, container, false)
     }
@@ -36,13 +31,13 @@ class HomeFragment : Fragment(), SelectedPositionsProvider{
 
         val assetManager = requireContext().assets
         val files = assetManager.list("json") ?: emptyArray()
-        homeAdapter = HomeAdapter( files)
+        homeAdapter = HomeAdapter(activity?.application as WordUnlockApplication, files)
         recyclerView.adapter = homeAdapter
         // 当数据加载完成或更新时调用
-        homeAdapter.notifyDataSetChanged()
 
+        homeAdapter.notifyDataSetChanged()
         restoreSelectedPositions()
-        selectedPositionsProvider = this
+        homeAdapter.setDefaultSelection()
     }
 
     override fun onPause() {
@@ -54,14 +49,13 @@ class HomeFragment : Fragment(), SelectedPositionsProvider{
     private fun restoreSelectedPositions() {
         val preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
         val positionsJson = preferences.getString("selected_positions", "[]")
-        if (positionsJson != null) {
-            if (positionsJson.isNotBlank()) {
-                val restoredPositions = Gson().fromJson(positionsJson, Array<Int>::class.java).toMutableSet()
-                restoredPositions.forEach { position ->
-                    if (position in homeAdapter.dataList.indices) {
-                        homeAdapter.dataList[position].isChecked = true
-                        homeAdapter.notifyItemChanged(position)
-                    }
+        if (positionsJson != null && positionsJson.isNotBlank()) {
+            val restoredPositions = Gson().fromJson(positionsJson, Array<Int>::class.java).toMutableSet()
+            selectedPositions = restoredPositions
+            restoredPositions.forEach { position ->
+                if (position in homeAdapter.dataList.indices) {
+                    homeAdapter.dataList[position].isChecked = true
+                    homeAdapter.notifyItemChanged(position)
                 }
             }
         }
@@ -95,12 +89,13 @@ class HomeFragment : Fragment(), SelectedPositionsProvider{
     }
 
     private fun selectAllItems() {
-        val allItemsShouldBeChecked = !homeAdapter.dataList.any { it.isChecked }
+        //val allItemsShouldBeChecked = !homeAdapter.dataList.any { it.isChecked }
         homeAdapter.dataList.forEachIndexed { index, item ->
-            item.isChecked = allItemsShouldBeChecked
-            selectedPositions = if (allItemsShouldBeChecked) homeAdapter.dataList.indices.toMutableSet() else mutableSetOf()
+            item.isChecked = true
             homeAdapter.updateItemCheckedStatus(index, item.isChecked)
         }
+
+
     }
 
     private fun deselectAllItems() {
@@ -110,16 +105,9 @@ class HomeFragment : Fragment(), SelectedPositionsProvider{
             homeAdapter.updateItemCheckedStatus(index, item.isChecked)
         }
     }
-    override fun getSelectedPositions(): Set<Int> {
-        return selectedPositions.toSet()
-    }
-
-    override fun setSelectedPositions(positions: Set<Int>) {
-        this.selectedPositions = positions.toMutableSet()
-    }
 
 
-        companion object {
+    companion object {
         @JvmStatic
         fun newInstance(): Fragment? {
             return HomeFragment()
