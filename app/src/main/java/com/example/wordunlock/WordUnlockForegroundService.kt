@@ -22,6 +22,7 @@ import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import com.example.wordunlock.models.WordDefinition
 import com.example.wordunlock.util.SoftKeyboardListener
 import com.lzf.easyfloat.EasyFloat
 import com.lzf.easyfloat.enums.ShowPattern
@@ -40,6 +41,7 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
 
     private var keyboardListener: SoftKeyboardListener? = null
     private var wordTextView: TextView? = null
+    private var soundMarkTextVIew: TextView? = null
     private var commentTextView: TextView? = null
     private var inputEditText: EditText? = null
     private var tts: TextToSpeech? = null
@@ -69,10 +71,19 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
 
         // 启动前台服务
         startForeground(NOTIFICATION_ID, notification)
+        val wordDefinition = intent?.getParcelableExtra<WordDefinition>("wordDefinition")
+        wordDefinition?.let {
+            // 使用提取的wordDefinition对象
+            val word = it.word
+            val uk = it.uk
+            var us = it.us
+            val definition = it.definition
+            // ...处理word和definition
+        }
         val word = intent?.getStringExtra("word") ?: "example"
         val definition = intent?.getStringExtra("definition") ?: "示例"
         // 创建并显示悬浮窗
-        showFloatingWindow(word,definition)
+        showFloatingWindow(wordDefinition)
         return START_STICKY
     }
 
@@ -89,16 +100,18 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun showFloatingWindow(word: String, definition: String) {
+    private fun showFloatingWindow(wordDefinition: WordDefinition?) {
 
         EasyFloat.with(this)
             .setTag("float_word_input")
             .setLayout(R.layout.float_word_input,OnInvokeView { view ->
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                 wordTextView = view.findViewById(R.id.wordTextView)
+                soundMarkTextVIew = view.findViewById(R.id.soundMarkTextView)
                 commentTextView = view.findViewById(R.id.commentTextView)
-                wordTextView?.text = word
-                commentTextView?.text = definition
+                wordTextView?.text = wordDefinition?.word
+                soundMarkTextVIew?.text = wordDefinition?.us
+                commentTextView?.text = wordDefinition?.definition
                 val confirmButton: Button = view.findViewById<Button?>(R.id.confirmButton)
                 val inputEditText: EditText = view.findViewById(R.id.inputEditText)
 
@@ -107,7 +120,8 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
                 // 为 EditText 设置 OnClickListener
                 inputEditText?.setOnClickListener {
                     InputMethodUtils.openInputMethod(inputEditText)
-                    //EasyFloat.updateFloat("float_word_input",-1,-1,-1,-3)
+                    EasyFloat.updateFloat("float_word_input",-1,-1,-1,-2)
+
                 }
                 inputEditText.setOnEditorActionListener(
                     OnEditorActionListener { v, actionId, event ->
