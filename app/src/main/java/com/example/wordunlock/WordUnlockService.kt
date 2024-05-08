@@ -3,6 +3,7 @@ package com.example.wordunlock
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,6 +43,17 @@ class WordUnlockService : AccessibilityService() {
         val packageName = event.packageName.toString()
         val currentTime = System.currentTimeMillis()
 
+        // 新增逻辑：排除后台应用列表和应用抽屉
+        val isRecentsOrAppDrawer = when (eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // 这里可以根据实际情况调整，通常后台应用列表和应用抽屉会有特定的类名或包名
+                // 以下为示例逻辑，您可能需要根据具体设备和ROM进行调整
+                packageName.startsWith("com.android.systemui") && packageName.endsWith(".recents") ||
+                        packageName.startsWith("com.android.launcher3") && event.className?.contains("AllAppsContainerView") == true
+            }
+            else -> false
+        }
+        if (isRecentsOrAppDrawer) return // 如果是后台应用列表或应用抽屉，则直接返回不处理
 
         // 检查是否解锁
         val isUnlockEvent = eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && isUnlockEvent(event)
@@ -84,11 +96,16 @@ class WordUnlockService : AccessibilityService() {
         return !keyguardManager.isKeyguardLocked
     }
     private fun isLauncherPackage(packageName: String): Boolean {
-        // 获取设备的 Launcher 应用的包名
-        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
-        val launcherPackageName = resolveInfo?.activityInfo?.packageName
-        return launcherPackageName != null && packageName == launcherPackageName
+        try {
+            // 获取设备的 Launcher 应用的包名
+            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            val launcherPackageName = resolveInfo?.activityInfo?.packageName
+            return launcherPackageName != null && packageName == launcherPackageName
+        } catch (e: Exception) {
+            Log.e(TAG, "Error occurred while checking for launcher package", e)
+            return false // 或者根据需要处理异常情况
+        }
     }
 
     private fun isScreenUnlocked(): Boolean {

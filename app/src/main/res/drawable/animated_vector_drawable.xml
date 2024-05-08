@@ -1,0 +1,8 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/baseline_volume_up_24">
+
+    <target
+        android:name="volume_up"
+        android:animation="@animator/volume_up_to_play_arrow" />
+
+</animated-vector>

@@ -52,19 +52,19 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.frame_layout_container)
         val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
 
-        setupActionBarWithNavController(navController)
+        //setupActionBarWithNavController(navController)
+        // 修改这里，使用一个匿名的NavHostFragment的OnDestinationChangedListener
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
+            supportActionBar?.title = destination.label.toString()
+            if (destination.id == R.id.navigation_settings) {
+                // 设置ActionBar标题
+
+                supportActionBar?.setDisplayHomeAsUpEnabled(false)
+                supportActionBar?.setDisplayShowHomeEnabled(false)
+            }
+        }
         bottomNavView.setupWithNavController(navController)
-        /*val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)*/
 
-        /*recyclerView = this.findViewById(R.id.recycler_view)
-
-        recyclerView.layoutManager = GridLayoutManager(this, 3)
-        val fileNames = getRawFileNames(this)
-        val assetManager = assets
-        val files = assetManager.list("json")
-        jsonFileListAdapter = JsonFileListAdapter(this, files)
-        recyclerView.adapter = jsonFileListAdapter*/
 
         // 检查并请求 SYSTEM_ALERT_WINDOW 权限
         if (!Settings.canDrawOverlays(this)) {
@@ -73,7 +73,10 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, REQUEST_CODE_OVERLAY_PERMISSION)
         }
     }
-
+    override fun onSupportNavigateUp(): Boolean {
+        val navController = findNavController(R.id.frame_layout_container)
+        return navController.navigateUp() || super.onSupportNavigateUp()
+    }
 
     // 检查辅助功能是否开启
     private fun Context.isAccessibilityServiceEnabled(): Boolean {

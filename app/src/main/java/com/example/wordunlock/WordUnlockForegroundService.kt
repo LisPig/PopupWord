@@ -2,9 +2,14 @@ package com.example.wordunlock
 
 import android.app.*
 import android.content.Intent
+import android.graphics.drawable.AnimatedVectorDrawable
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.text.InputType
+import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -23,9 +28,10 @@ import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.interfaces.OnInvokeView
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.utils.InputMethodUtils
+import java.util.Locale
 
 
-class WordUnlockForegroundService : Service() {
+class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
 
     companion object {
         private const val NOTIFICATION_ID = 100
@@ -36,12 +42,16 @@ class WordUnlockForegroundService : Service() {
     private var wordTextView: TextView? = null
     private var commentTextView: TextView? = null
     private var inputEditText: EditText? = null
+    private var tts: TextToSpeech? = null
     override fun onBind(intent: Intent?): IBinder? = null
 
 
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        tts = TextToSpeech(this, this)
+
+
         // 创建通知渠道 (Android 8.0 以上)
         createNotificationChannel()
         // 创建通知
@@ -85,13 +95,13 @@ class WordUnlockForegroundService : Service() {
             .setTag("float_word_input")
             .setLayout(R.layout.float_word_input,OnInvokeView { view ->
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-                // 在这里获取并保存对 TextView 的引用
                 wordTextView = view.findViewById(R.id.wordTextView)
                 commentTextView = view.findViewById(R.id.commentTextView)
                 wordTextView?.text = word
                 commentTextView?.text = definition
                 val confirmButton: Button = view.findViewById<Button?>(R.id.confirmButton)
                 val inputEditText: EditText = view.findViewById(R.id.inputEditText)
+
                 inputEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
 
                 // 为 EditText 设置 OnClickListener
@@ -132,6 +142,28 @@ class WordUnlockForegroundService : Service() {
                 closeButton.setOnClickListener{
                     EasyFloat.dismiss("float_word_input",true)
                 }
+                //播放按钮
+                val playButton: ImageView = view.findViewById(R.id.play_button)
+                val animatedVectorDrawable = playButton.drawable as? AnimatedVectorDrawable
+                if (animatedVectorDrawable != null) {
+                    animatedVectorDrawable.start()
+                }
+                playButton.setOnClickListener {
+                    val word = wordTextView?.text.toString()
+                    val animatedVectorDrawable = playButton.drawable as? AnimatedVectorDrawable
+                    if (animatedVectorDrawable != null) {
+                        if (animatedVectorDrawable.isRunning) {
+                            animatedVectorDrawable.stop()
+                            // 播放按钮被点击，暂停动画
+                        } else {
+                            animatedVectorDrawable.start()
+                            // 暂停按钮被点击，播放动画
+                            speak(word)
+                        }
+                    }
+                    speak(word)
+                }
+
             }) // 设置悬浮窗布局
             .setShowPattern(ShowPattern.ALL_TIME) // 设置显示模式 (例如始终显示)
             .setGravity(Gravity.CENTER) // 设置悬浮窗位置 (例如居中)
@@ -144,5 +176,46 @@ class WordUnlockForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
     }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = tts?.setLanguage(Locale.getDefault())
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "This language is not supported")
+            } else {
+                // 示例：播放一段文字
+                Log.d("test","Hello, this is a test.")
+            }
+        } else {
+            Log.e("TTS", "Initialization failed!")
+        }
+    }
+
+    fun speak(text: String) {
+        tts?.apply {
+            // 设置utteranceId用于跟踪发音完成状态
+            val utteranceId = this.hashCode().toString()
+            val params = Bundle().apply {
+                putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+            }
+            // 开始播放
+            speak(text, TextToSpeech.QUEUE_FLUSH, params, null)
+            // 可选：监听发音进度
+            setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    Log.d("TTS", "Speaking started: $utteranceId")
+                }
+
+                override fun onError(utteranceId: String?) {
+                    Log.e("TTS", "Error during speech: $utteranceId")
+                }
+
+                override fun onDone(utteranceId: String?) {
+                    Log.d("TTS", "Speech completed: $utteranceId")
+                }
+            })
+        }
+    }
+
 
 }
