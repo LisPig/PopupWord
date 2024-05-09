@@ -1,7 +1,10 @@
 package com.example.wordunlock
 
+import android.annotation.SuppressLint
 import android.app.*
+import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.os.Build
 import android.os.Bundle
@@ -9,12 +12,15 @@ import android.os.IBinder
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.text.InputType
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -49,6 +55,7 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
 
 
 
+    @SuppressLint("ServiceCast")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         tts = TextToSpeech(this, this)
@@ -72,18 +79,21 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
         // 启动前台服务
         startForeground(NOTIFICATION_ID, notification)
         val wordDefinition = intent?.getParcelableExtra<WordDefinition>("wordDefinition")
-        wordDefinition?.let {
-            // 使用提取的wordDefinition对象
-            val word = it.word
-            val uk = it.uk
-            var us = it.us
-            val definition = it.definition
-            // ...处理word和definition
-        }
-        val word = intent?.getStringExtra("word") ?: "example"
-        val definition = intent?.getStringExtra("definition") ?: "示例"
         // 创建并显示悬浮窗
         showFloatingWindow(wordDefinition)
+        // 创建并设置 SoftKeyboardListener
+        /*val activity = (this as Context).getSystemService(Context.ACTIVITY_SERVICE) as Activity
+        keyboardListener = SoftKeyboardListener(activity).apply {
+            setKeyboardListener { isShowing ->
+                if (isShowing) {
+                    // 如果软键盘显示，将悬浮窗口移动到软键盘的上方
+                    EasyFloat.getFloatView()?.y = 0f
+                } else {
+                    // 如果软键盘隐藏，将悬浮窗口移动到屏幕的中央
+                    EasyFloat.getFloatView()?.y = (Resources.getSystem().displayMetrics.heightPixels / 2).toFloat()
+                }
+            }
+        }*/
         return START_STICKY
     }
 
@@ -100,8 +110,9 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
         notificationManager.createNotificationChannel(channel)
     }
 
+    private var floatViewWidth = 0
+    private var floatViewHeight = 0
     private fun showFloatingWindow(wordDefinition: WordDefinition?) {
-
         EasyFloat.with(this)
             .setTag("float_word_input")
             .setLayout(R.layout.float_word_input,OnInvokeView { view ->
@@ -118,10 +129,20 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
                 inputEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
 
                 // 为 EditText 设置 OnClickListener
+                val viewTreeObserver = view.viewTreeObserver
+                viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        // 视图已测量完成，获取浮窗的尺寸
+                        floatViewWidth = view.width
+                        floatViewHeight = view.height
+                        view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        // 此时可以计算并设置动态位置
+                        setLocationAfterMeasurements()
+                    }
+                })
                 inputEditText?.setOnClickListener {
-                    InputMethodUtils.openInputMethod(inputEditText)
-                    EasyFloat.updateFloat("float_word_input",-1,-1,-1,-2)
-
+                    InputMethodUtils.openInputMethod(inputEditText,tag="float_word_input")
+                    //EasyFloat.updateFloat("float_word_input",-1,-1,-1,-2)
                 }
                 inputEditText.setOnEditorActionListener(
                     OnEditorActionListener { v, actionId, event ->
@@ -183,12 +204,27 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
             .setGravity(Gravity.CENTER) // 设置悬浮窗位置 (例如居中)
             .setDragEnable(false)
             .hasEditText(true)
+            .setDragEnable(true)
             .setDisplayHeight { context -> DisplayUtils.rejectedNavHeight(context) }
-            // ... 设置其他参数 (例如大小、拖动行为等)
             .show()
     }
+
+    private fun setLocationAfterMeasurements() {
+        val displayMetrics = DisplayMetrics()
+        val windowManager: WindowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowManager.defaultDisplay.getMetrics(displayMetrics)
+
+        // 计算中间偏上的坐标
+        val yOffset = displayMetrics.heightPixels * 0.2f // 假设偏上10%的高度
+        val centerX = (displayMetrics.widthPixels - floatViewWidth) / 2
+
+        EasyFloat.updateFloat("float_word_input", centerX, yOffset.toInt())
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        // 移除 SoftKeyboardListener
+        keyboardListener?.removeKeyboardListener()
     }
 
     override fun onInit(status: Int) {
