@@ -49,6 +49,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".Fragment.FavoriteListActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme"/>
+
 
         <service
             android:name=".WordUnlockService"

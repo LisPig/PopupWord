@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.*
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +19,6 @@ import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -28,6 +26,9 @@ import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.example.wordunlock.db.AppDatabase
+import com.example.wordunlock.models.FavoriteItem
 import com.example.wordunlock.models.WordDefinition
 import com.example.wordunlock.util.SoftKeyboardListener
 import com.lzf.easyfloat.EasyFloat
@@ -35,32 +36,40 @@ import com.lzf.easyfloat.enums.ShowPattern
 import com.lzf.easyfloat.interfaces.OnInvokeView
 import com.lzf.easyfloat.utils.DisplayUtils
 import com.lzf.easyfloat.utils.InputMethodUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 
-class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
+class WordUnlockForegroundService : IntentService("WordUnlockService"), TextToSpeech.OnInitListener {
 
     companion object {
         private const val NOTIFICATION_ID = 100
         private const val CHANNEL_ID = "word_unlock_channel"
     }
-
+    private lateinit var db: AppDatabase
     private var keyboardListener: SoftKeyboardListener? = null
     private var wordTextView: TextView? = null
     private var soundMarkTextVIew: TextView? = null
+    private var starButton: ImageView? = null
     private var commentTextView: TextView? = null
     private var inputEditText: EditText? = null
     private var tts: TextToSpeech? = null
-    override fun onBind(intent: Intent?): IBinder? = null
+    private var isStarred = true // 用于跟踪星星是否被选中
 
+    private val ACTION_ADD_FAVORITE = "ACTION_ADD_FAVORITE"
+    private  val ACTION_REMOVE_FAVORITE = "ACTION_REMOVE_FAVORITE"
+    private  val EXTRA_FAVORITE_ITEM = "EXTRA_FAVORITE_ITEM"
+    override fun onBind(intent: Intent?): IBinder? = null
 
 
     @SuppressLint("ServiceCast")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        db = (application as WordUnlockApplication).db
         tts = TextToSpeech(this, this)
-
-
         // 创建通知渠道 (Android 8.0 以上)
         createNotificationChannel()
         // 创建通知
@@ -70,30 +79,11 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
             .setContentText("服务正在运行")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
-
-        // 初始化键盘监听器，并在Activity中注册接收器
-
-        // 注册键盘状态广播接收器（如果需要在服务内部处理某些逻辑）
-        //registerReceiver(keyboardStateReceiver, IntentFilter("KEYBOARD_STATE_CHANGED"))
-
         // 启动前台服务
         startForeground(NOTIFICATION_ID, notification)
         val wordDefinition = intent?.getParcelableExtra<WordDefinition>("wordDefinition")
         // 创建并显示悬浮窗
         showFloatingWindow(wordDefinition)
-        // 创建并设置 SoftKeyboardListener
-        /*val activity = (this as Context).getSystemService(Context.ACTIVITY_SERVICE) as Activity
-        keyboardListener = SoftKeyboardListener(activity).apply {
-            setKeyboardListener { isShowing ->
-                if (isShowing) {
-                    // 如果软键盘显示，将悬浮窗口移动到软键盘的上方
-                    EasyFloat.getFloatView()?.y = 0f
-                } else {
-                    // 如果软键盘隐藏，将悬浮窗口移动到屏幕的中央
-                    EasyFloat.getFloatView()?.y = (Resources.getSystem().displayMetrics.heightPixels / 2).toFloat()
-                }
-            }
-        }*/
         return START_STICKY
     }
 
@@ -112,7 +102,7 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
 
     private var floatViewWidth = 0
     private var floatViewHeight = 0
-    private fun showFloatingWindow(wordDefinition: WordDefinition?) {
+    private  fun showFloatingWindow(wordDefinition: WordDefinition?) {
         EasyFloat.with(this)
             .setTag("float_word_input")
             .setLayout(R.layout.float_word_input,OnInvokeView { view ->
@@ -199,6 +189,14 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
                     speak(word)
                 }
 
+                starButton = view.findViewById<ImageView>(R.id.star_button)
+                starButton?.setOnClickListener {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        toggleStarColorAndSaveState(wordDefinition)
+                    }
+                }
+
+
             }) // 设置悬浮窗布局
             .setShowPattern(ShowPattern.ALL_TIME) // 设置显示模式 (例如始终显示)
             .setGravity(Gravity.CENTER) // 设置悬浮窗位置 (例如居中)
@@ -215,11 +213,73 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
         windowManager.defaultDisplay.getMetrics(displayMetrics)
 
         // 计算中间偏上的坐标
-        val yOffset = displayMetrics.heightPixels * 0.2f // 假设偏上10%的高度
+        val yOffset = displayMetrics.heightPixels * 0.2f // 假设偏上20%的高度
         val centerX = (displayMetrics.widthPixels - floatViewWidth) / 2
 
         EasyFloat.updateFloat("float_word_input", centerX, yOffset.toInt())
     }
+
+    private suspend fun toggleStarColorAndSaveState(wordDefinition: WordDefinition?) {
+        val favoriteItem = FavoriteItem(null, wordDefinition?.word, wordDefinition?.uk, wordDefinition?.us, wordDefinition?.definition)
+        if (isStarred) {
+            // 在协程中调用 saveFavoriteItem
+            withContext(Dispatchers.IO) {
+                saveFavoriteItem(item = favoriteItem)
+            }
+            val goldenDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_star_gold_24)
+            starButton?.setImageDrawable(goldenDrawable)
+        } else {
+            val normalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_star_24)
+            starButton?.setImageDrawable(normalDrawable)
+            withContext(Dispatchers.IO) {
+                removeFavoriteItem(favoriteItem?.word)
+            }
+        }
+        isStarred = !isStarred // 切换状态
+    }
+    private suspend fun saveFavoriteItem(item: FavoriteItem) {
+        withContext(Dispatchers.IO) {
+            db.favoriteItemDao().insert(item)
+        }
+    }
+
+    private suspend fun removeFavoriteItem(item: String?) {
+        withContext(Dispatchers.IO) {
+            if (item != null) {
+                db.favoriteItemDao().delete(item)
+            }
+        }
+    }
+
+    override fun onHandleIntent(intent: Intent?) {
+        intent?.let { intent ->
+            when (intent.action) {
+                ACTION_ADD_FAVORITE -> {
+                    val newItem = intent.getParcelableExtra<FavoriteItem>(EXTRA_FAVORITE_ITEM)
+                    if (newItem != null) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            saveFavoriteItem(newItem)
+                        }
+                    } else {
+
+                    }
+                }
+                ACTION_REMOVE_FAVORITE -> {
+                    val itemToRemove = intent.getStringExtra(EXTRA_FAVORITE_ITEM)
+                    if (itemToRemove != null) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            removeFavoriteItem(itemToRemove)
+                        }
+                    } else {
+
+                    }
+                }
+                else -> Log.w("ColloctionOpertion", "Unknown action: ${intent.action}")
+            }
+        }
+    }
+
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -266,6 +326,7 @@ class WordUnlockForegroundService : Service(), TextToSpeech.OnInitListener {
             })
         }
     }
+
 
 
 }

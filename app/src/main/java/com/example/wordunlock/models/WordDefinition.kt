@@ -3,7 +3,10 @@ package com.example.wordunlock.models
 import android.os.Parcel
 import android.os.Parcelable
 
-data class WordDefinition(val word: String,var uk: String,var us: String, val definition: String) :
+data class WordDefinition(
+                          val word: String,
+                          var uk: String,
+                          var us: String, val definition: String) :
     Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readString() ?: "",
