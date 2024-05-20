@@ -128,9 +128,11 @@ class WordUnlockService : AccessibilityService() {
             val intent = Intent(this, WordUnlockForegroundService::class.java)
             val randomWordDefinition = getRandomWordDefinitionFromJson(this)
             randomWordDefinition?.let {
-                intent.putExtra("wordDefinition", it) // 传递单词数据
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                startService(intent)
+                if(it != null) {
+                    intent.putExtra("wordDefinition", it) // 传递单词数据
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    startService(intent)
+                }
             }
        // }
     }

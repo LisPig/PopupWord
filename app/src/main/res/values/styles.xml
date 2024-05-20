@@ -10,6 +10,9 @@
     </style>
 
     <style name="AppTheme" parent="Theme.MaterialComponents.Light">
-<!--        <item name="colorPrimary">@color/custom_primary_color</item>-->
+        <item name="colorPrimary">@color/custom_primary_color</item>
+        <item name="android:statusBarColor">@color/custom_primary_color</item>
     </style>
+
+
 </resources>

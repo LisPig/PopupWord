@@ -63,7 +63,23 @@ class MainActivity : AppCompatActivity() {
                 supportActionBar?.setDisplayShowHomeEnabled(false)
             }
         }
+
+        if (!isAccessibilityServiceEnabled()) {
+            // 如果辅助功能未开启，在这里处理逻辑，比如弹窗提示或直接finish()
+            // 注意：此处处理逻辑需谨慎，避免无限循环或用户体验不佳的情况
+            // 示例代码可能需要根据实际情况调整
+            AlertDialog.Builder(this)
+                .setTitle("辅助功能未开启")
+                .setMessage("请确保辅助功能已开启以正常使用应用。")
+                .setPositiveButton("前往设置") { dialog, _ ->
+                    dialog.dismiss()
+                    openAccessibilitySettings()
+                }
+                .setCancelable(false) // 避免用户点击外部关闭而不做处理
+                .show()
+        }
         bottomNavView.setupWithNavController(navController)
+
 
 
         // 检查并请求 SYSTEM_ALERT_WINDOW 权限
@@ -97,18 +113,13 @@ class MainActivity : AppCompatActivity() {
             // 检查权限是否已授予
             if (Settings.canDrawOverlays(this)) {
                 // 权限已授予，执行相关操作
-                val intent = Intent(this, WordUnlockForegroundService::class.java)
+                val intent = Intent(this, WordUnlockService::class.java)
                 startService(intent)
             } else {
                 // 权限未授予，提示用户或执行其他操作
                 System.out.println("fail")
             }
         }
-    }
-
-    fun getRawFileNames(context: Context): List<String> {
-        val rawClass = R.raw::class.java
-        return rawClass.fields.map { it.name }
     }
 
     //}
@@ -130,38 +141,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 在Activity变为可见时检查辅助功能状态
-        if (!isAccessibilityServiceEnabled()) {
-            // 如果辅助功能未开启，在这里处理逻辑，比如弹窗提示或直接finish()
-            // 注意：此处处理逻辑需谨慎，避免无限循环或用户体验不佳的情况
-            // 示例代码可能需要根据实际情况调整
-            AlertDialog.Builder(this)
-                .setTitle("辅助功能未开启")
-                .setMessage("请确保辅助功能已开启以正常使用应用。")
-                .setPositiveButton("前往设置") { dialog, _ ->
-                    dialog.dismiss()
-                    openAccessibilitySettings()
-                }
-                .setCancelable(false) // 避免用户点击外部关闭而不做处理
-                .show()
-        } else {
-            // 辅助功能已开启，执行其他逻辑
-            //setContentView(R.layout.activity_main)
-            val navController = findNavController(R.id.frame_layout_container)
-            val bottomNavView = findViewById<BottomNavigationView>(R.id.bottom_nav_view)
-            bottomNavView.setupWithNavController(navController)
-            // val fileList = assets.list("raw")
-            /*val raw_read_string = applicationContext.resources.openRawResource(R.raw.sixlevel).bufferedReader().use{
-                it.readText()
-            }*/
-            /*recyclerView = this.findViewById(R.id.recycler_view)
-            val layoutManager = LinearLayoutManager(this)
-            recyclerView.layoutManager = layoutManager
 
-            val fileNames = getRawFileNames(this)
-            jsonFileListAdapter = JsonFileListAdapter(this, fileNames)
-            recyclerView.adapter = jsonFileListAdapter*/
-        }
     }
 
 }

@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <array name="json_file_ids">
-        <item>@raw/sixlevel</item>
-        <item>@raw/sixlevel</item>
-        <!-- Add more JSON file resource IDs here -->
-    </array>
+
 </resources>
