@@ -5,10 +5,10 @@
     <item
         android:id="@+id/action_select_all"
         android:orderInCategory="100"
-        android:title="Check all"
+        android:title="全选"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_deselect_all"
-        android:title="Unselect all"/>
+        android:title="取消全选"/>
 </menu>

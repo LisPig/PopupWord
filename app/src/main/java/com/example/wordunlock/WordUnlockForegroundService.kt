@@ -226,10 +226,10 @@ class WordUnlockForegroundService : IntentService("WordUnlockService"), TextToSp
             withContext(Dispatchers.IO) {
                 saveFavoriteItem(item = favoriteItem)
             }
-            val goldenDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_star_gold_24)
+            val goldenDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_check_circle_24)
             starButton?.setImageDrawable(goldenDrawable)
         } else {
-            val normalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_star_24)
+            val normalDrawable = ContextCompat.getDrawable(this, R.drawable.baseline_check_circle_outline_24)
             starButton?.setImageDrawable(normalDrawable)
             withContext(Dispatchers.IO) {
                 removeFavoriteItem(favoriteItem?.word)

@@ -1,9 +1,8 @@
 <resources>
-    <string name="app_name">WordUnlock</string>
-    <string name="accessibility_service_description">辅助功能服务，用于解锁后学习单词</string>
-    <string name="dictionary">dictionary</string>
-    <string name="setting">setting</string>
-    <string name="level6vocabulary">六级词汇</string>
-    <string name="action_select">checkAll</string>
+    <string name="app_name">弹词</string>
+    <string name="accessibility_service_description">开辅助功能服务，用于解锁后通过在桌面弹窗学习单词。提示：必须开启此服务，否则软件将缺失核心功能，本软件不会收集您的任何隐私。</string>
+    <string name="dictionary">词库</string>
+    <string name="setting">设置</string>
+    <string name="action_select">全选</string>
 
 </resources>

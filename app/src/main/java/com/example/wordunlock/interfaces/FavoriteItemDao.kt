@@ -24,4 +24,6 @@ interface FavoriteItemDao {
     @Query("DELETE  FROM favorite_items WHERE word LIKE :word")
     suspend fun delete(word: String)
 
+    @Query("DELETE  FROM favorite_items WHERE id LIKE :id")
+    suspend fun deleteById(id: Int)
 }

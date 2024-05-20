@@ -35,7 +35,7 @@ class FavoriteListActivity : AppCompatActivity() {
         adapter = FavoriteListAdapter { item ->
             lifecycleScope.launch {
                 // 在这里处理删除操作，例如调用DAO的delete方法
-                // favoriteItemDao.delete(item)
+                item.id?.let { db.favoriteItemDao().deleteById(it) }
             }
         }
         recyclerView.adapter = adapter

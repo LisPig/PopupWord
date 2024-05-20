@@ -6,10 +6,14 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import com.example.wordunlock.databinding.CollectionListBinding
 import com.example.wordunlock.models.FavoriteItem
+import com.google.gson.internal.bind.ReflectiveTypeAdapterFactory.Adapter
 
 class FavoriteListAdapter(private val onDeleteClickListener: (FavoriteItem) -> Unit) :
     ListAdapter<FavoriteItem, FavoriteItemViewHolder>(FavoriteItemDiffCallback()) {
 
+    var selectedPosition = -1
+    val selectedItemOrNull: FavoriteItem?
+        get() = if (selectedPosition >= 0 && selectedPosition < itemCount) getItem(selectedPosition) else null
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FavoriteItemViewHolder {
         val binding = CollectionListBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return FavoriteItemViewHolder(binding)
@@ -29,4 +33,7 @@ class FavoriteListAdapter(private val onDeleteClickListener: (FavoriteItem) -> U
             return oldItem == newItem
         }
     }
+
+
+
 }
