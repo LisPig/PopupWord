@@ -14,7 +14,7 @@ interface FavoriteItemDao {
     suspend fun insert(item: FavoriteItem)
 
     @Query("SELECT * FROM favorite_items WHERE word LIKE :word")
-    fun getFavoritesByWord(word: String): Flow<FavoriteItem>
+    fun getFavoritesByWord(word: String): FavoriteItem
 
     // 其他查询、更新、删除操作
 

@@ -33,6 +33,10 @@ data class FavoriteItem(@PrimaryKey(autoGenerate = true)
         return 0
     }
 
+    fun isNotEmpty(): Boolean {
+        return word?.isNotEmpty() == true
+    }
+
     companion object CREATOR : Parcelable.Creator<FavoriteItem> {
         override fun createFromParcel(parcel: Parcel): FavoriteItem {
             return FavoriteItem(parcel)

@@ -10,9 +10,16 @@ import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.example.wordunlock.adapters.JsonFileListAdapter
+import com.example.wordunlock.db.AppDatabase
+import com.example.wordunlock.models.FavoriteItem
 import com.example.wordunlock.models.WordDefinition
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
@@ -22,10 +29,12 @@ import kotlin.random.Random
 
 class WordUnlockService : AccessibilityService() {
 
+    private val mainScope = CoroutineScope(Dispatchers.Main)
     private var wasScreenUnlocked = false // 上次事件时屏幕是否解锁
     private var lastUnlockTime: Long = 0 // 上次解锁时间
     private var lastNonDesktopPackageName: String? = null // 上次非桌面应用的包名
     private var firstDesktopReturnHandled = false // 首次从非桌面应用返回桌面的逻辑是否已处理
+    private lateinit var db: AppDatabase
     // 在 WordUnlockService 中注册事件类型
     override fun onServiceConnected() {
         val info = AccessibilityServiceInfo()
@@ -39,6 +48,7 @@ class WordUnlockService : AccessibilityService() {
     }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        db = (application as WordUnlockApplication).db
         val eventType = event.eventType
         val packageName = event.packageName.toString()
         val currentTime = System.currentTimeMillis()
@@ -65,7 +75,10 @@ class WordUnlockService : AccessibilityService() {
                 lastUnlockTime = currentTime // 记录解锁时间
                 if (!firstDesktopReturnHandled && isSwitchToDesktop) {
                     // 如果是首次安装后首次解锁切回桌面，触发弹窗
-                    showWordInputActivity()
+                    mainScope.launch {
+                        showWordInputActivity()
+                    }
+                    //showWordInputActivity()
                     firstDesktopReturnHandled = true
                 }
 
@@ -74,7 +87,9 @@ class WordUnlockService : AccessibilityService() {
                 // 从非桌面应用切回桌面，并且在解锁后的短时间内
                 if (!firstDesktopReturnHandled || lastNonDesktopPackageName != null) {
                     // 首次或非首次（但符合解锁后短时间内）从非桌面应用返回桌面，触发弹窗
-                    showWordInputActivity()
+                    mainScope.launch {
+                        showWordInputActivity()
+                    }
                     if (!firstDesktopReturnHandled) {
                         firstDesktopReturnHandled = true
                     }
@@ -122,19 +137,36 @@ class WordUnlockService : AccessibilityService() {
     override fun onInterrupt() {
 
     }
+    override fun onDestroy() {
+        super.onDestroy()
+        mainScope.cancel() // 记得在服务销毁时取消协程，以防止内存泄漏
+    }
 
-    private fun showWordInputActivity() {
-       // if (currentActivity == null) {
-            val intent = Intent(this, WordUnlockForegroundService::class.java)
-            val randomWordDefinition = getRandomWordDefinitionFromJson(this)
-            randomWordDefinition?.let {
-                if(it != null) {
-                    intent.putExtra("wordDefinition", it) // 传递单词数据
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    startService(intent)
-                }
+    private suspend fun showWordInputActivity() {
+        val maxAttempts = 10
+        val wordDefinition = withContext(Dispatchers.IO) {
+            (1..maxAttempts).firstOrNull { attempt ->
+                val randomWordDefinition = getRandomWordDefinitionFromJson(this@WordUnlockService)
+                randomWordDefinition != null && !isWordInFavorites(randomWordDefinition.word)
+            }?.let { getRandomWordDefinitionFromJson(this@WordUnlockService) }
+        }
+
+        wordDefinition?.let { def ->
+            withContext(Dispatchers.Main) {
+                val intent = Intent(this@WordUnlockService, WordUnlockForegroundService::class.java)
+                intent.putExtra("wordDefinition", def)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                startService(intent)
             }
-       // }
+        }
+    }
+
+
+    private suspend fun isWordInFavorites(word: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            val favorites = db.favoriteItemDao().getFavoritesByWord(word)
+            favorites?.isNotEmpty() ?: false
+        }
     }
 
 
