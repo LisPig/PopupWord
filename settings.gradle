@@ -13,5 +13,5 @@ dependencyResolutionManagement {
         maven { url 'https://jitpack.io' }
     }
 }
-rootProject.name = "WordUnlock"
+rootProject.name = "PopupWord"
 include ':app'

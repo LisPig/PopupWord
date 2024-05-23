@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.wordunlock'
+    namespace 'com.solooxy.popupword'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.wordunlock"
+        applicationId "com.solooxy.popupword"
         minSdk 24
         targetSdk 33
         versionCode 1

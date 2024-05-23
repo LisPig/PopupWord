@@ -4,7 +4,7 @@
     <data>
         <variable
             name="item"
-            type="com.example.wordunlock.models.FavoriteItem" />
+            type="com.solooxy.popupword.models.FavoriteItem" />
     </data>
 
 

@@ -7,13 +7,13 @@
 
     <fragment
         android:id="@+id/navigation_home"
-        android:name="com.example.wordunlock.Fragment.HomeFragment"
+        android:name="com.solooxy.popupword.Fragment.HomeFragment"
         android:label="@string/dictionary"
         tools:layout="@layout/home_fragment" />
 
     <fragment
         android:id="@+id/navigation_settings"
-        android:name="com.example.wordunlock.Fragment.SettingsFragment"
+        android:name="com.solooxy.popupword.Fragment.SettingsFragment"
         android:label="@string/setting"
         tools:layout="@layout/fragment_settings" />
 

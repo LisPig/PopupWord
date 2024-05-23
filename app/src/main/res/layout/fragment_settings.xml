@@ -127,7 +127,7 @@
         android:id="@+id/text_view_version"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="当前应用版本 0.0.1"
+        android:text="当前应用版本 1.0.0"
         android:textStyle="bold"
         android:textColor="@android:color/darker_gray"
         android:layout_marginTop="16dp" />
