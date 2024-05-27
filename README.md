@@ -10,6 +10,6 @@
 
 ![image](https://github.com/LisPig/WordUnlock/assets/20128576/99c491b1-6db5-474a-89de-bcbad04b0773)
 
-本项目90%的代码由Gemini pro和阿里千义通问提供。比较推荐千义通问，在提供代码和解决问题方面比较全面。<br>
+本项目90%的代码由Gemini pro和阿里通义灵码生成并提供。比较推荐通义灵码，在提供代码和解决问题方面比较全面。<br>
 项目使用的悬浮窗来自开源项目：https://github.com/princekin-f/EasyFloat
 
